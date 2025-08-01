@@ -1,0 +1,92 @@
+import { Resolver, Query, Args, Mutation } from '@nestjs/graphql';
+import { Req, Res, HttpStatus } from '@nestjs/common';
+import type { Response } from 'express';
+import { Public } from '@/decorators';
+import { AuthService } from '@/modules/auth/auth.service';
+import { UserEntity } from '@/modules/user/user.entity';
+import type { TRequest } from '@/common/types';
+import {
+  SignUpDto,
+  SignInDto,
+  SignInResponseDto,
+  RefreshTokenDto,
+  UpdatePasswordDto,
+  UpdateProfileDto,
+} from '@/modules/auth/dtos';
+
+@Resolver('auth')
+export class AuthResolver {
+  constructor(private readonly authService: AuthService) {}
+
+  // #================#
+  // # ==> SIGNUP <== #
+  // #================#
+  @Public()
+  @Mutation(() => SignInResponseDto)
+  signUp(@Args('payload') payload: SignUpDto) {
+    return this.authService.signUp(payload);
+  }
+
+  // #================#
+  // # ==> SIGNIN <== #
+  // #================#
+  @Public()
+  @Mutation(() => SignInResponseDto)
+  signIn(
+    @Res({ passthrough: true }) res: Response,
+    @Args('payload') payload: SignInDto,
+  ): Promise<SignInResponseDto> {
+    return this.authService.signIn(res, payload);
+  }
+
+  // #=================#
+  // # ==> SIGNOUT <== #
+  // #=================#
+  @Mutation(() => Number)
+  signOut(@Res({ passthrough: true }) res: Response): HttpStatus {
+    return this.authService.signOut(res);
+  }
+
+  // #=======================#
+  // # ==> REFRESH TOKEN <== #
+  // #=======================#
+  @Public()
+  @Mutation(() => SignInResponseDto)
+  refreshToken(
+    @Req() req: TRequest,
+    @Args('payload') payload: RefreshTokenDto,
+  ): Promise<SignInResponseDto> {
+    return this.authService.refreshToken(req, payload);
+  }
+
+  // #=========================#
+  // # ==> UPDATE PASSWORD <== #
+  // #=========================#
+  @Mutation(() => SignInResponseDto)
+  updatePassword(
+    @Req() req: TRequest,
+    @Res({ passthrough: true }) res: Response,
+    @Args('payload') payload: UpdatePasswordDto,
+  ): Promise<SignInResponseDto> {
+    return this.authService.updatePassword(req, res, payload);
+  }
+
+  // #=====================#
+  // # ==> GET PROFILE <== #
+  // #=====================#
+  @Query(() => UserEntity)
+  getProfile(@Req() req: TRequest): UserEntity {
+    return this.authService.getProfile(req);
+  }
+
+  // #========================#
+  // # ==> UPDATE PROFILE <== #
+  // #========================#
+  @Mutation(() => UserEntity)
+  updateProfile(
+    @Req() req: TRequest,
+    @Args('payload') payload: UpdateProfileDto,
+  ): Promise<UserEntity> {
+    return this.authService.updateProfile(req, payload);
+  }
+}
