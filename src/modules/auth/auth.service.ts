@@ -41,18 +41,6 @@ export class AuthService extends BaseService<UserEntity> {
     // Check user already exists
     const { id, passwordTimestamp } = decodeToken;
     const existedUser = await this.userService.checkExist({
-      select: [
-        'id',
-        'avatar',
-        'email',
-        'password',
-        'firstName',
-        'lastName',
-        'roleId',
-        'isEmailVerified',
-        'passwordTimestamp',
-        'role',
-      ],
       where: { id, isEmailVerified: true },
       relations: { role: true },
     });
@@ -88,7 +76,6 @@ export class AuthService extends BaseService<UserEntity> {
 
     res.cookie(ECookieKey.REFRESH_TOKEN, refreshToken, {
       domain: isProductionMode ? process.env.DOMAIN : undefined,
-      path: '/',
       secure: isProductionMode,
       httpOnly: true,
       sameSite: 'lax',
@@ -151,6 +138,7 @@ export class AuthService extends BaseService<UserEntity> {
     const accessToken = this.jwtService.generateToken({
       type: ETokenType.ACCESS_TOKEN,
       tokenPayload: { ...commonTokenPayload, isAccessToken: true },
+      options: { expiresIn: 5 },
     });
 
     // Generate refreshToken
@@ -201,6 +189,7 @@ export class AuthService extends BaseService<UserEntity> {
     const newAccessToken = this.jwtService.generateToken({
       type: ETokenType.ACCESS_TOKEN,
       tokenPayload: { id, email, passwordTimestamp, isAccessToken: true },
+      options: { expiresIn: 5 },
     });
 
     return { accessToken: newAccessToken };

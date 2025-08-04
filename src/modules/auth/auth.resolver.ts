@@ -1,5 +1,5 @@
-import { Resolver, Query, Args, Mutation } from '@nestjs/graphql';
-import { Req, Res, HttpStatus } from '@nestjs/common';
+import { Resolver, Query, Args, Mutation, Context } from '@nestjs/graphql';
+import { HttpStatus } from '@nestjs/common';
 import type { Response } from 'express';
 import { Public } from '@/decorators';
 import { AuthService } from '@/modules/auth/auth.service';
@@ -33,7 +33,7 @@ export class AuthResolver {
   @Public()
   @Mutation(() => SignInResponseDto)
   signIn(
-    @Res({ passthrough: true }) res: Response,
+    @Context() { res }: { res: Response },
     @Args('payload') payload: SignInDto,
   ): Promise<SignInResponseDto> {
     return this.authService.signIn(res, payload);
@@ -43,7 +43,7 @@ export class AuthResolver {
   // # ==> SIGNOUT <== #
   // #=================#
   @Mutation(() => Number)
-  signOut(@Res({ passthrough: true }) res: Response): HttpStatus {
+  signOut(@Context() { res }: { res: Response }): HttpStatus {
     return this.authService.signOut(res);
   }
 
@@ -53,7 +53,7 @@ export class AuthResolver {
   @Public()
   @Mutation(() => SignInResponseDto)
   refreshToken(
-    @Req() req: TRequest,
+    @Context() { req }: { req: TRequest },
     @Args('payload') payload: RefreshTokenDto,
   ): Promise<SignInResponseDto> {
     return this.authService.refreshToken(req, payload);
@@ -64,8 +64,7 @@ export class AuthResolver {
   // #=========================#
   @Mutation(() => SignInResponseDto)
   updatePassword(
-    @Req() req: TRequest,
-    @Res({ passthrough: true }) res: Response,
+    @Context() { req, res }: { req: TRequest; res: Response },
     @Args('payload') payload: UpdatePasswordDto,
   ): Promise<SignInResponseDto> {
     return this.authService.updatePassword(req, res, payload);
@@ -75,7 +74,7 @@ export class AuthResolver {
   // # ==> GET PROFILE <== #
   // #=====================#
   @Query(() => UserEntity)
-  getProfile(@Req() req: TRequest): UserEntity {
+  getProfile(@Context() { req }: { req: TRequest }): UserEntity {
     return this.authService.getProfile(req);
   }
 
@@ -84,7 +83,7 @@ export class AuthResolver {
   // #========================#
   @Mutation(() => UserEntity)
   updateProfile(
-    @Req() req: TRequest,
+    @Context() { req }: { req: TRequest },
     @Args('payload') payload: UpdateProfileDto,
   ): Promise<UserEntity> {
     return this.authService.updateProfile(req, payload);

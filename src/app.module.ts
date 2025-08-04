@@ -36,6 +36,7 @@ import type { TEnvConfiguration } from '@/config';
     GraphQLModule.forRoot<ApolloDriverConfig>({
       driver: ApolloDriver,
       autoSchemaFile: true,
+      context: ({ req, res }) => ({ req, res }),
     }),
 
     // #==============================#
