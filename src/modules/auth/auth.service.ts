@@ -9,7 +9,7 @@ import type { TRequest } from '@/common/types';
 import { BaseService } from '@/common/base.service';
 import { UserService } from '@/modules/user/user.service';
 import { UserEntity } from '@/modules/user/user.entity';
-import { JwtService, ETokenType, TVerifyToken } from '@/modules/shared/services';
+import { JwtService, ETokenType, TVerifyToken, AwsS3Service } from '@/modules/shared/services';
 import {
   SignUpDto,
   SignInDto,
@@ -17,6 +17,7 @@ import {
   RefreshTokenDto,
   UpdatePasswordDto,
   UpdateProfileDto,
+  GeneratePreSignedUrlDto,
 } from '@/modules/auth/dtos';
 
 @Injectable()
@@ -27,6 +28,7 @@ export class AuthService extends BaseService<UserEntity> {
 
     private userService: UserService,
     private jwtService: JwtService,
+    private awsS3Service: AwsS3Service,
   ) {
     super(repository);
   }
@@ -258,5 +260,18 @@ export class AuthService extends BaseService<UserEntity> {
   async updateProfile(req: TRequest, payload: UpdateProfileDto) {
     await this.repository.update(req.authUser.id, payload);
     return { ...req.authUser, ...payload };
+  }
+
+  // # =============================== #
+  // # ==> GENERATE PRE-SIGNED URL <== #
+  // # =============================== #
+  async generatePreSignedUrl(req: TRequest, payload: GeneratePreSignedUrlDto) {
+    const { id: authId } = req.authUser;
+    const { filename, contentType } = payload;
+
+    return await this.awsS3Service.generatePreSignedUrl({
+      key: `${authId}/${filename}`,
+      contentType,
+    });
   }
 }

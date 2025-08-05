@@ -59,7 +59,7 @@ import type { TEnvConfiguration } from '@/config';
           migrationsRun: false,
           synchronize: true,
           namingStrategy: new SnakeNamingStrategy(),
-          logging: true,
+          logging: false,
           ...options,
         });
 

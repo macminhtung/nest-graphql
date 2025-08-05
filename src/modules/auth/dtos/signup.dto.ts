@@ -4,10 +4,6 @@ import { IsEmail, IsString } from 'class-validator';
 @InputType()
 export class SignUpDto {
   @Field(() => String)
-  @IsString()
-  avatar: string;
-
-  @Field(() => String)
   @IsEmail()
   email: string;
 

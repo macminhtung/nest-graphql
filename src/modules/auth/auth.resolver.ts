@@ -12,6 +12,7 @@ import {
   RefreshTokenDto,
   UpdatePasswordDto,
   UpdateProfileDto,
+  GeneratePreSignedUrlDto,
 } from '@/modules/auth/dtos';
 
 @Resolver('auth')
@@ -22,7 +23,7 @@ export class AuthResolver {
   // # ==> SIGNUP <== #
   // #================#
   @Public()
-  @Mutation(() => SignInResponseDto)
+  @Mutation(() => UserEntity)
   signUp(@Args('payload') payload: SignUpDto) {
     return this.authService.signUp(payload);
   }
@@ -87,5 +88,16 @@ export class AuthResolver {
     @Args('payload') payload: UpdateProfileDto,
   ): Promise<UserEntity> {
     return this.authService.updateProfile(req, payload);
+  }
+
+  // # =============================== #
+  // # ==> GENERATE PRE-SIGNED URL <== #
+  // # =============================== #
+  @Mutation(() => String)
+  generatePreSignedUrl(
+    @Context() { req }: { req: TRequest },
+    @Args('payload') payload: GeneratePreSignedUrlDto,
+  ): Promise<string> {
+    return this.authService.generatePreSignedUrl(req, payload);
   }
 }
