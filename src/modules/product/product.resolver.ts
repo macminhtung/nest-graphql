@@ -1,11 +1,10 @@
 import { Resolver, Query, Args, Mutation } from '@nestjs/graphql';
 import { EEntity, ERoleName } from '@/common/enums';
-import { Roles } from '@/decorators';
-import { Public } from '@/decorators';
+import { Public, Roles } from '@/decorators';
+import { GetPaginatedRecordsDto, PaginatedResponseDto } from '@/common/dtos';
 import { ProductService } from '@/modules/product/product.service';
 import { ProductEntity } from '@/modules/product/product.entity';
 import { CreateProductDto, PaginatedProductsResponseDto } from '@/modules/product/dtos';
-import { GetPaginatedRecordsDto, PaginatedResponseDto } from '@/common/dtos';
 
 @Resolver(EEntity.PRODUCT)
 export class ProductResolver {
