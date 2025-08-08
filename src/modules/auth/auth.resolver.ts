@@ -1,10 +1,10 @@
 import { Resolver, Query, Args, Mutation, Context } from '@nestjs/graphql';
 import { HttpStatus } from '@nestjs/common';
-import type { Response } from 'express';
 import { Public } from '@/decorators';
 import { AuthService } from '@/modules/auth/auth.service';
 import { UserEntity } from '@/modules/user/user.entity';
 import type { TRequest } from '@/common/types';
+import type { FastifyReply } from 'fastify';
 import {
   SignUpDto,
   SignInDto,
@@ -34,18 +34,18 @@ export class AuthResolver {
   @Public()
   @Mutation(() => SignInResponseDto)
   signIn(
-    @Context() { res }: { res: Response },
+    @Context() { reply }: { reply: FastifyReply },
     @Args('payload') payload: SignInDto,
   ): Promise<SignInResponseDto> {
-    return this.authService.signIn(res, payload);
+    return this.authService.signIn(reply, payload);
   }
 
   // #=================#
   // # ==> SIGNOUT <== #
   // #=================#
   @Mutation(() => Number)
-  signOut(@Context() { res }: { res: Response }): HttpStatus {
-    return this.authService.signOut(res);
+  signOut(@Context() { reply }: { reply: FastifyReply }): HttpStatus {
+    return this.authService.signOut(reply);
   }
 
   // #=======================#
@@ -65,10 +65,10 @@ export class AuthResolver {
   // #=========================#
   @Mutation(() => SignInResponseDto)
   updatePassword(
-    @Context() { req, res }: { req: TRequest; res: Response },
+    @Context() { req, reply }: { req: TRequest; reply: FastifyReply },
     @Args('payload') payload: UpdatePasswordDto,
   ): Promise<SignInResponseDto> {
-    return this.authService.updatePassword(req, res, payload);
+    return this.authService.updatePassword(req, reply, payload);
   }
 
   // #=====================#

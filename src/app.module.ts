@@ -3,7 +3,7 @@ import { DataSource } from 'typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { GraphQLModule } from '@nestjs/graphql';
-import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
+import { YogaDriver, YogaDriverConfig } from '@graphql-yoga/nestjs';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 import { loadENVsFunc, ENV_VALIDATION } from '@/config';
@@ -17,6 +17,7 @@ import { ProductModule } from '@/modules/product/product.module';
 import { SharedModule } from '@/modules/shared/shared.module';
 import { ElasticModule } from '@/modules/elastic/elastic.module';
 import type { TEnvConfiguration } from '@/config';
+import type { FastifyRequest, FastifyReply } from 'fastify';
 
 @Module({
   imports: [
@@ -30,13 +31,13 @@ import type { TEnvConfiguration } from '@/config';
       validationSchema: ENV_VALIDATION,
     }),
 
-    // #=======================#
-    // # ==> APOLLO MODULE <== #
-    // #=======================#
-    GraphQLModule.forRoot<ApolloDriverConfig>({
-      driver: ApolloDriver,
+    // #========================#
+    // # ==> GRAPHQL MODULE <== #
+    // #========================#
+    GraphQLModule.forRoot<YogaDriverConfig>({
+      driver: YogaDriver,
       autoSchemaFile: true,
-      context: ({ req, res }) => ({ req, res }),
+      context: (context: { req: FastifyRequest; reply: FastifyReply }) => context,
     }),
 
     // #==============================#

@@ -1,15 +1,14 @@
 import { NestFactory } from '@nestjs/core';
-import type { NestExpressApplication } from '@nestjs/platform-express';
-import cookieParser from 'cookie-parser';
+import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
+import fastifyCookie from '@fastify/cookie';
 import { Logger } from '@nestjs/common';
 import { AppModule } from '@/app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter());
 
-  app.disable('x-powered-by'); // Remove x-powered-by header
   app.enableCors({ origin: process.env.APP_URI, credentials: true });
-  app.use(cookieParser());
+  await app.register(fastifyCookie);
 
   // #===========================#
   // # ==> START APPLICATION <== #

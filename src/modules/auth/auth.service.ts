@@ -1,15 +1,21 @@
 import { Injectable, BadRequestException, HttpStatus } from '@nestjs/common';
-import type { Response } from 'express';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { hash, compare } from 'bcrypt';
 import { ERROR_MESSAGES, DEFAULT_ROLES } from '@/common/constants';
 import { ECookieKey } from '@/common/enums';
-import type { TRequest } from '@/common/types';
 import { BaseService } from '@/common/base.service';
 import { UserService } from '@/modules/user/user.service';
 import { UserEntity } from '@/modules/user/user.entity';
-import { JwtService, ETokenType, TVerifyToken, AwsS3Service } from '@/modules/shared/services';
+import {
+  JwtService,
+  ETokenType,
+  TVerifyToken,
+  AwsS3Service,
+  JWT_EXPIRED_MESSAGE,
+} from '@/modules/shared/services';
+import type { TRequest } from '@/common/types';
+import type { FastifyReply } from 'fastify';
 import {
   SignUpDto,
   SignInDto,
@@ -73,10 +79,10 @@ export class AuthService extends BaseService<UserEntity> {
   // #=======================================#
   // # ==> SET REFRESH_TOKEN INTO COOKIE <== #
   // #=======================================#
-  setRefreshTokenIntoCookie(res: Response, refreshToken: string) {
+  setRefreshTokenIntoCookie(reply: FastifyReply, refreshToken: string) {
     const isProductionMode = process.env.NODE_ENV === 'prod';
 
-    res.cookie(ECookieKey.REFRESH_TOKEN, refreshToken, {
+    reply.setCookie(ECookieKey.REFRESH_TOKEN, refreshToken, {
       domain: isProductionMode ? process.env.DOMAIN : undefined,
       secure: isProductionMode,
       httpOnly: true,
@@ -117,7 +123,7 @@ export class AuthService extends BaseService<UserEntity> {
   // #================#
   // # ==> SIGNIN <== #
   // #================#
-  async signIn(res: Response, payload: SignInDto): Promise<SignInResponseDto> {
+  async signIn(res: FastifyReply, payload: SignInDto): Promise<SignInResponseDto> {
     const { email, password } = payload;
 
     // Check email already exists
@@ -159,7 +165,7 @@ export class AuthService extends BaseService<UserEntity> {
   // #=================#
   // # ==> SIGNOUT <== #
   // #=================#
-  signOut(res: Response): HttpStatus {
+  signOut(res: FastifyReply): HttpStatus {
     // Clear refreshToken into cookie
     this.setRefreshTokenIntoCookie(res, '');
 
@@ -169,8 +175,8 @@ export class AuthService extends BaseService<UserEntity> {
   // #=======================#
   // # ==> REFRESH TOKEN <== #
   // #=======================#
-  async refreshToken(req: TRequest, payload: RefreshTokenDto) {
-    const refreshToken = req.cookies[ECookieKey.REFRESH_TOKEN];
+  async refreshToken(request: TRequest, payload: RefreshTokenDto) {
+    const refreshToken = request.cookies[ECookieKey.REFRESH_TOKEN] || '';
     const { accessToken } = payload;
 
     // Check refreshToken valid
@@ -183,7 +189,7 @@ export class AuthService extends BaseService<UserEntity> {
     try {
       await this.checkToken({ type: ETokenType.ACCESS_TOKEN, token: accessToken });
     } catch (error) {
-      if (error.message !== 'jwt expired')
+      if (error.message !== JWT_EXPIRED_MESSAGE)
         throw new BadRequestException({ message: ERROR_MESSAGES.ACCESS_TOKEN_INVALID });
     }
 
@@ -200,12 +206,12 @@ export class AuthService extends BaseService<UserEntity> {
   // #=========================#
   // # ==> UPDATE PASSWORD <== #
   // #=========================#
-  async updatePassword(req: TRequest, res: Response, payload: UpdatePasswordDto) {
-    const { id: authId, email, password } = req.authUser;
+  async updatePassword(request: TRequest, res: FastifyReply, payload: UpdatePasswordDto) {
+    const { id: authId, email, password } = request.authUser;
     const { oldPassword, newPassword } = payload;
 
     // Check refreshToken valid
-    const refreshToken = req.cookies[ECookieKey.REFRESH_TOKEN];
+    const refreshToken = request.cookies[ECookieKey.REFRESH_TOKEN] || '';
     await this.checkToken({
       type: ETokenType.REFRESH_TOKEN,
       token: refreshToken,
@@ -250,8 +256,8 @@ export class AuthService extends BaseService<UserEntity> {
   // #=====================#
   // # ==> GET PROFILE <== #
   // #=====================#
-  getProfile(req: TRequest) {
-    return req.authUser;
+  getProfile(request: TRequest) {
+    return request.authUser;
   }
 
   // #========================#

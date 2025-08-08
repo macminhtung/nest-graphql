@@ -13,9 +13,9 @@ export class AuthGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    // Get token from request
-    const request: TRequest = context.getArgs()[2].req;
-    const accessToken = request.headers?.authorization?.replace('Bearer ', '') || '';
+    // Get token from originReq
+    const req: TRequest = context.getArgs()[2].req;
+    const accessToken = req.headers.authorization?.replace('Bearer ', '') || '';
 
     // #======================#
     // # ==> CASE: PUBLIC <== #
@@ -31,8 +31,8 @@ export class AuthGuard implements CanActivate {
       token: accessToken,
     });
 
-    // Update authUser for the request
-    request.authUser = authUser;
+    // Update authUser and cookies for the request
+    req.authUser = authUser;
 
     return true;
   }
