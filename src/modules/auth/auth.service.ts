@@ -9,7 +9,13 @@ import type { TRequest } from '@/common/types';
 import { BaseService } from '@/common/base.service';
 import { UserService } from '@/modules/user/user.service';
 import { UserEntity } from '@/modules/user/user.entity';
-import { JwtService, ETokenType, TVerifyToken, AwsS3Service } from '@/modules/shared/services';
+import {
+  JwtService,
+  ETokenType,
+  TVerifyToken,
+  AwsS3Service,
+  JWT_EXPIRED_MESSAGE,
+} from '@/modules/shared/services';
 import {
   SignUpDto,
   SignInDto,
@@ -183,7 +189,7 @@ export class AuthService extends BaseService<UserEntity> {
     try {
       await this.checkToken({ type: ETokenType.ACCESS_TOKEN, token: accessToken });
     } catch (error) {
-      if (error.message !== 'jwt expired')
+      if (error.message !== JWT_EXPIRED_MESSAGE)
         throw new BadRequestException({ message: ERROR_MESSAGES.ACCESS_TOKEN_INVALID });
     }
 
