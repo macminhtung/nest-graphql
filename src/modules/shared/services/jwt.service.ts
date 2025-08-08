@@ -27,6 +27,8 @@ type TGenerateToken<T extends ETokenType> = {
 
 export type TVerifyToken<T extends ETokenType> = TDecodeToken<T>;
 
+export const JWT_EXPIRED_MESSAGE = 'jwt expired';
+
 @Injectable()
 export class JwtService {
   constructor(private configService: ConfigService<TEnvConfiguration>) {
@@ -66,7 +68,13 @@ export class JwtService {
 
     // Verify token
     jwt.verify(token, this.jwtSecretKey, (err: VerifyErrors) => {
-      if (err) throw new BadRequestException({ message: err.message });
+      if (err)
+        throw new BadRequestException({
+          message:
+            err.message === JWT_EXPIRED_MESSAGE
+              ? JWT_EXPIRED_MESSAGE
+              : `[${ERROR_MESSAGES.TOKEN_INVALID}] ${err.message}`,
+        });
     });
 
     // Decode token
