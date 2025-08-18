@@ -26,12 +26,9 @@ export class ProductService extends BaseService<ProductEntity> {
     await this.checkConflict({ where: { name: payload.name } });
 
     // Start transaction
-    const queryRunner = this.dataSource.createQueryRunner();
     const resData = await this.handleTransactionAndRelease(
-      queryRunner,
-
       // Process function
-      async () => {
+      async (tx) => {
         // Create new product
         const newProduct = await queryRunner.manager.save(ProductEntity, payload);
 

@@ -1,12 +1,16 @@
 import { Resolver, Query, Args, Mutation } from '@nestjs/graphql';
-import { EEntity, ERoleName } from '@/common/enums';
+import { ETableName, ERoleName } from '@/common/enums';
 import { PaginatedResponseDto } from '@/common/dtos';
 import { Roles } from '@/decorators';
 import { UserService } from '@/modules/user/user.service';
-import { UserEntity } from '@/modules/user/user.entity';
-import { UpdateUserDto, GetUsersPaginatedDto } from '@/modules/user/dtos';
+import {
+  UpdateUserDto,
+  GetUsersPaginatedDto,
+  UserResponseDto,
+  PaginatedUsersResponseDto,
+} from '@/modules/user/dtos';
 
-@Resolver(EEntity.USER)
+@Resolver(ETableName.USER)
 export class UserResolver {
   constructor(private readonly userService: UserService) {}
 
@@ -14,8 +18,11 @@ export class UserResolver {
   // # ==> UPDATE USER <== #
   // #=====================#
   @Roles([ERoleName.ADMIN])
-  @Mutation(() => UserEntity)
-  updateUser(@Args('id') id: string, @Args('payload') payload: UpdateUserDto): Promise<UserEntity> {
+  @Mutation(() => UserResponseDto)
+  updateUser(
+    @Args('id') id: string,
+    @Args('payload') payload: UpdateUserDto,
+  ): Promise<UserResponseDto> {
     return this.userService.updateUser(id, payload);
   }
 
@@ -23,8 +30,8 @@ export class UserResolver {
   // # ==> GET USER <== #
   // #==================#
   @Roles([ERoleName.ADMIN])
-  @Query(() => UserEntity)
-  getUser(@Args('id') id: string): Promise<UserEntity> {
+  @Query(() => UserResponseDto)
+  getUser(@Args('id') id: string): Promise<UserResponseDto> {
     return this.userService.getUser(id);
   }
 
@@ -32,10 +39,10 @@ export class UserResolver {
   // # ==> GET PAGINATED USERS <== #
   // #=============================#
   @Roles([ERoleName.ADMIN])
-  @Query(() => UserEntity)
+  @Query(() => PaginatedUsersResponseDto)
   getPaginatedUsers(
     @Args('queryParams') queryParams: GetUsersPaginatedDto,
-  ): Promise<PaginatedResponseDto<UserEntity>> {
+  ): Promise<PaginatedResponseDto<UserResponseDto>> {
     return this.userService.getPaginatedUsers(queryParams);
   }
 }

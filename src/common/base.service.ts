@@ -1,15 +1,7 @@
 import {
-  Repository,
-  FindOneOptions,
-  QueryRunner,
-  SelectQueryBuilder,
-  ObjectLiteral,
-  DataSource,
-} from 'typeorm';
-import { InjectDataSource } from '@nestjs/typeorm';
-import {
   ConflictException,
   Injectable,
+  Inject,
   BadRequestException,
   NotFoundException,
 } from '@nestjs/common';
@@ -22,62 +14,73 @@ import {
 } from '@/common/dtos';
 import { ERROR_MESSAGES } from '@/common/constants';
 import { EOrder } from '@/common/enums';
+import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import { DATABASE_INJECT_TOKEN, SCHEMA } from '@/modules/database/database.module';
+import {
+  inArray,
+  notInArray,
+  gte,
+  lte,
+  isNotNull,
+  asc,
+  desc,
+  count,
+  ExtractTablesWithRelations,
+} from 'drizzle-orm';
+import { AnyPgSelectQueryBuilder, PgSelectDynamic } from 'drizzle-orm/pg-core';
+
+type TSchema = typeof SCHEMA;
+type QueryType = NodePgDatabase<TSchema>['query'];
+type TFindFirstConfig<T extends TTableName> = Parameters<QueryType[T]['findFirst']>[0];
+type TTableName = keyof QueryType;
+type TTableSchema<T extends TTableName> = TSchema[T];
+type TTableRecord<T extends TTableName> = TTableSchema<T>['$inferSelect'];
+type TWithRelation<T extends TTableName> = ExtractTablesWithRelations<TSchema[T]['$inferSelect']>;
 
 @Injectable()
-export class BaseService<E extends ObjectLiteral> {
-  constructor(protected readonly repository: Repository<E>) {
-    this.entityName = this.repository.metadata.name;
+export class BaseService<T extends TTableName> {
+  constructor(protected readonly tableName: T) {}
+
+  @Inject(DATABASE_INJECT_TOKEN)
+  public readonly database: NodePgDatabase<TSchema>;
+
+  // #==============================#
+  // # ==> GET SELECTION FIELDS <== #
+  // #==============================#
+  getSelectionFields(tableName: T) {
+    const cols = Object.keys(SCHEMA[tableName]['_']['columns']);
+    return cols.reduce((preV, curV) => ({ ...preV, [curV]: SCHEMA[tableName][curV] }), {});
   }
-  public entityName: string;
 
-  public pagingQueryBuilder: SelectQueryBuilder<E>;
-
-  @InjectDataSource()
-  public readonly dataSource: DataSource;
-
-  // #=====================#
-  // # ==> TRANSACTION <== #
-  // #=====================#
-  async handleTransactionAndRelease<T>(
-    queryRunner: QueryRunner,
-    processFunc: () => Promise<T>,
-    rollbackFunc?: () => void,
-  ): Promise<T> {
-    try {
-      // Start transaction
-      await queryRunner.startTransaction();
-
-      // Run callback function
-      const resData = await processFunc();
-
-      // Commit transaction
-      await queryRunner.commitTransaction();
-
-      return resData;
-
-      // Rollback
-    } catch (err) {
-      // Rollback func
-      if (rollbackFunc) rollbackFunc();
-
-      throw new BadRequestException({ message: err.message });
-
-      // Release the query runner
-    } finally {
-      await queryRunner.release();
-    }
+  // #=============================#
+  // # ==> GET PAGINATED QUERY <== #
+  // #=============================#
+  getPaginatedQueries() {
+    const tableName: TTableName = this.tableName;
+    return {
+      paginatedQuery: this.database.select().from(SCHEMA[tableName]).$dynamic(),
+      countQuery: this.database.select({ count: count() }).from(SCHEMA[tableName]).$dynamic(),
+    };
   }
 
   // #=====================#
   // # ==> CHECK_EXIST <== #
   // #=====================#
-  async checkExist(findOpts: FindOneOptions<E>, errorMessage?: string): Promise<E> {
-    const existRecord = await this.repository.findOne(findOpts);
+  async checkExist<K extends TFindFirstConfig<T> & TWithRelation<T>>(payload: {
+    tableName?: T;
+    findOpts: K;
+    errorMessage?: string;
+  }) {
+    const { tableName = this.tableName, findOpts, errorMessage } = payload;
+    const existRecord = await this.database.query[tableName].findFirst({
+      ...findOpts,
+      with: { ...findOpts?.with },
+    });
 
     // Throw error if the record doesn't exists
     if (!existRecord)
       throw new NotFoundException({
-        message: errorMessage || `[${this.repository.metadata.name}] ${ERROR_MESSAGES.NOT_FOUND}!`,
+        message: errorMessage || `[${tableName}] ${ERROR_MESSAGES.NOT_FOUND}!`,
       });
 
     return existRecord;
@@ -86,15 +89,38 @@ export class BaseService<E extends ObjectLiteral> {
   // #========================#
   // # ==> CHECK_CONFLICT <== #
   // #========================#
-  async checkConflict(findOpts: FindOneOptions<E>, errorMessage?: string) {
-    const existRecord = await this.repository.findOne(findOpts);
+  async checkConflict(payload: {
+    tableName?: T;
+    findOpts: TFindFirstConfig<T>;
+    errorMessage?: string;
+  }) {
+    const { tableName = this.tableName, findOpts, errorMessage } = payload;
+    const existRecord = await this.database.query[tableName].findFirst(findOpts);
 
     // Throw error if the record exists
     if (existRecord)
       throw new ConflictException({
-        message:
-          errorMessage || `[${this.repository.metadata.name}] ${ERROR_MESSAGES.ALREADY_EXISTS}!`,
+        message: errorMessage || `[${tableName}] ${ERROR_MESSAGES.ALREADY_EXISTS}!`,
       });
+  }
+
+  // #=====================#
+  // # ==> TRANSACTION <== #
+  // #=====================#
+  async handleTransactionAndRelease<T>(
+    processFunc: (tx: NodePgDatabase<TSchema>) => Promise<T>,
+    rollbackFunc?: () => void,
+  ) {
+    try {
+      // Process function
+      return await this.database.transaction((tx) => processFunc(tx));
+    } catch (error) {
+      // Rollback func
+      if (rollbackFunc) rollbackFunc();
+
+      // Throw transaction error message
+      throw new BadRequestException({ message: error.message });
+    }
   }
 
   // #===============================#
@@ -102,8 +128,8 @@ export class BaseService<E extends ObjectLiteral> {
   // #===============================#
   async getPaginatedRecords(
     args: GetPaginatedRecordsDto,
-    customFilter?: () => void,
-  ): Promise<PaginatedResponseDto<E>> {
+    customFilter?: (query: ReturnType<typeof this.getPaginatedQueries>['paginatedQuery']) => void,
+  ): Promise<PaginatedResponseDto<TTableRecord<T>>> {
     const {
       isDeleted,
       createdFrom,
@@ -116,46 +142,50 @@ export class BaseService<E extends ObjectLiteral> {
       take = DEFAULT_PAGE_TAKE,
     } = args;
 
+    const tableSchema = SCHEMA[this.tableName];
+
+    // Create database selector
+    const { paginatedQuery, countQuery } = this.getPaginatedQueries();
+    const baseQueries = [paginatedQuery, countQuery];
+
     // Query records based on includeIds
-    const queryBuilder = this.repository.createQueryBuilder(this.entityName);
-    if (includeIds?.length) queryBuilder.whereInIds(includeIds);
+    if (includeIds?.length)
+      baseQueries.forEach((q) => q.where(inArray(tableSchema.id, includeIds)));
 
     // Query records based on excludeIds
     if (excludeIds?.length)
-      queryBuilder.andWhere(`${this.entityName}.id NOT IN (:...excludeIds)`, {
-        excludeIds,
-      });
+      baseQueries.forEach((q) => q.where(notInArray(tableSchema.id, excludeIds)));
 
     // Query records based on createdFrom
     if (createdFrom)
-      queryBuilder.andWhere(`${this.entityName}.createdAt >= :createdFrom`, {
-        createdFrom,
-      });
+      baseQueries.forEach((q) => q.where(gte(tableSchema.createdAt, new Date(createdFrom))));
 
     // Query records based on createdTo
     if (createdTo)
-      queryBuilder.andWhere(`${this.entityName}.createdAt < :createdTo`, {
-        createdTo,
-      });
+      baseQueries.forEach((q) => q.where(lte(tableSchema.createdAt, new Date(createdTo))));
 
     // Query deleted records
-    if (isDeleted) queryBuilder.andWhere(`${this.entityName}.deletedAt IS NOT NULL`).withDeleted();
-
-    // NOTE: Must mapping queryBuilder into pagingQueryBuilder before run customFilter
-    this.pagingQueryBuilder = queryBuilder;
+    if (isDeleted) baseQueries.forEach((q) => q.where(isNotNull(tableSchema.deletedAt)));
 
     // Run customFilter function
-    customFilter && customFilter();
+    if (customFilter)
+      baseQueries.forEach((query: PgSelectDynamic<AnyPgSelectQueryBuilder>) => customFilter(query));
 
-    // Sort records via createdAt
-    this.pagingQueryBuilder.addOrderBy(`${this.entityName}.createdAt`, order);
+    // Sort records based on createdAt
+    paginatedQuery.orderBy(
+      order === EOrder.ASC ? asc(tableSchema.createdAt) : desc(tableSchema.createdAt),
+    );
 
     // CASE: Select all records
-    if (isSelectAll) this.pagingQueryBuilder.limit(NUM_LIMIT_RECORDS);
+    if (isSelectAll) baseQueries.forEach((q) => q.limit(NUM_LIMIT_RECORDS));
     // CASE: Select pagination records
-    else this.pagingQueryBuilder.take(take).skip((page - 1) * take);
+    else baseQueries.forEach((q) => q.limit(take).offset((page - 1) * take));
 
-    const [entities, count] = await this.pagingQueryBuilder.getManyAndCount();
-    return new PaginatedResponseDto<E>({ args, total: count, records: entities });
+    const [records, count] = await Promise.all([
+      paginatedQuery,
+      isSelectAll ? 1 : (await countQuery)[0].count,
+    ]);
+    const total = isSelectAll ? records.length : count;
+    return new PaginatedResponseDto<TTableRecord<T>>({ args, total, records });
   }
 }
