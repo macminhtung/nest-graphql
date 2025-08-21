@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException, HttpStatus } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { InjectRepository } from '@mikro-orm/nestjs';
+import { EntityRepository } from '@mikro-orm/postgresql';
 import { hash, compare } from 'bcrypt';
 import { ERROR_MESSAGES, DEFAULT_ROLES } from '@/common/constants';
 import { ECookieKey } from '@/common/enums';
@@ -30,7 +30,7 @@ import {
 export class AuthService extends BaseService<UserEntity> {
   constructor(
     @InjectRepository(UserEntity)
-    public readonly repository: Repository<UserEntity>,
+    public readonly repository: EntityRepository<UserEntity>,
 
     private userService: UserService,
     private jwtService: JwtService,
@@ -48,10 +48,8 @@ export class AuthService extends BaseService<UserEntity> {
 
     // Check user already exists
     const { id, passwordTimestamp } = decodeToken;
-    const existedUser = await this.userService.checkExist({
-      where: { id, isEmailVerified: true },
-      relations: { role: true },
-    });
+
+    const existedUser = await this.checkExist({ filter: { id }, options: { populate: ['role'] } });
 
     // Check passwordTimestamp is correct
     if (passwordTimestamp !== existedUser.passwordTimestamp)
@@ -98,7 +96,7 @@ export class AuthService extends BaseService<UserEntity> {
     const { email, password, firstName, lastName } = payload;
 
     // Check if email has conflict
-    await this.userService.checkConflict({ where: { email } });
+    await this.checkConflict({ filter: { email } });
 
     // Create the passwordTimestamp
     const passwordTimestamp = new Date().valueOf().toString();
@@ -107,7 +105,7 @@ export class AuthService extends BaseService<UserEntity> {
     const hashPassword = await this.generateHashPassword(password);
 
     // Create a new user
-    const newUser = await this.repository.save({
+    const newUser = await this.repository.upsert({
       email,
       password: hashPassword,
       firstName,
@@ -127,16 +125,13 @@ export class AuthService extends BaseService<UserEntity> {
     const { email, password } = payload;
 
     // Check email already exists
-    const existUser = await this.userService.checkExist({
-      select: ['id', 'password', 'passwordTimestamp'],
-      where: { email, isEmailVerified: true },
-    });
-    const { id, passwordTimestamp } = existUser;
+    const existedUser = await this.checkExist({ filter: { email, isEmailVerified: true } });
+    const { id, passwordTimestamp } = existedUser;
 
     // Check password is valid
     const isValidPassword = await this.compareHashPassword({
       password,
-      hashPassword: existUser.password,
+      hashPassword: existedUser.password,
     });
     if (!isValidPassword)
       throw new BadRequestException({ message: ERROR_MESSAGES.PASSWORD_INCORRECT });
@@ -228,7 +223,8 @@ export class AuthService extends BaseService<UserEntity> {
     // Set new password
     const newPasswordTimestamp = new Date().valueOf().toString();
     const hashPassword = await this.generateHashPassword(newPassword);
-    await this.userService.repository.update(authId, {
+    await this.userService.repository.upsert({
+      id: authId,
       password: hashPassword,
       passwordTimestamp: newPasswordTimestamp,
     });
@@ -264,7 +260,7 @@ export class AuthService extends BaseService<UserEntity> {
   // # ==> UPDATE PROFILE <== #
   // #========================#
   async updateProfile(req: TRequest, payload: UpdateProfileDto) {
-    await this.repository.update(req.authUser.id, payload);
+    await this.update({ id: req.authUser.id }, payload);
     return { ...req.authUser, ...payload };
   }
 

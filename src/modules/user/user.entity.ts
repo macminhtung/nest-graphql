@@ -1,51 +1,49 @@
-import { Column, PrimaryGeneratedColumn, Entity, ManyToOne, Index } from 'typeorm';
+import { Entity, PrimaryKey, Property, ManyToOne, Index } from '@mikro-orm/core';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { EEntity } from '@/common/enums';
 import { BaseEntity } from '@/common/base.entity';
 import { RoleEntity } from '@/modules/user/role/role.entity';
 
 @ObjectType()
-@Entity({ name: EEntity.USER })
+@Entity({ tableName: EEntity.USER })
 export class UserEntity extends BaseEntity {
   @Field(() => String)
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryKey({ type: 'uuid', defaultRaw: 'gen_random_uuid()' })
   id: string;
 
   @Field(() => String)
-  @Column({ default: '' })
-  avatar: string;
+  @Property({ default: '' })
+  avatar?: string;
 
   @Field(() => String)
-  @Column({ unique: true })
+  @Property({ unique: true })
   email: string;
 
-  @Column()
+  @Property()
   password: string;
 
   @Field(() => String)
-  @Column()
   @Index()
+  @Property()
   firstName: string;
 
   @Field(() => String)
-  @Column()
   @Index()
+  @Property()
   lastName: string;
 
-  @Column({ default: new Date().valueOf().toString() })
-  passwordTimestamp: string; // ==> Check JWT after password change
+  @Property({ default: new Date().valueOf().toString() })
+  passwordTimestamp: string; // Check JWT after password change
 
   @Field(() => Boolean)
-  @Column({ default: false })
+  @Property({ default: false })
   isEmailVerified: boolean;
 
-  // Relation columns
   @Field(() => Number)
-  @Column({ type: 'int2' })
+  @Property({ type: 'int4', persist: false })
   roleId: number;
 
-  // Relation tables
   @Field(() => RoleEntity, { nullable: true })
   @ManyToOne(() => RoleEntity)
-  role: RoleEntity;
+  role?: RoleEntity;
 }

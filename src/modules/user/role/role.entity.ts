@@ -1,20 +1,20 @@
-import { Column, PrimaryColumn, Entity } from 'typeorm';
+import { Entity, PrimaryKey, Property, Enum } from '@mikro-orm/core';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { EEntity, ERoleName } from '@/common/enums';
 import { BaseEntity } from '@/common/base.entity';
 
 @ObjectType()
-@Entity({ name: EEntity.ROLE })
+@Entity({ tableName: EEntity.ROLE })
 export class RoleEntity extends BaseEntity {
   @Field(() => Number)
-  @PrimaryColumn({ type: 'int4' })
-  id: string;
+  @PrimaryKey({ type: 'int4' })
+  id: number;
 
   @Field(() => String)
-  @Column({ type: 'enum', enum: ERoleName })
-  name: string;
+  @Enum({ type: 'enum', items: () => ERoleName })
+  name: ERoleName;
 
-  @Field(() => String)
-  @Column({ nullable: true })
+  @Field(() => String, { nullable: true })
+  @Property({ nullable: true })
   description: string;
 }

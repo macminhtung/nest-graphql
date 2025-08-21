@@ -1,24 +1,24 @@
 import { Field, ObjectType } from '@nestjs/graphql';
-import { Column, PrimaryGeneratedColumn, Entity } from 'typeorm';
+import { Entity, PrimaryKey, Property } from '@mikro-orm/core';
 import { EEntity } from '@/common/enums';
 import { BaseEntity } from '@/common/base.entity';
 
 @ObjectType()
-@Entity({ name: EEntity.PRODUCT })
+@Entity({ tableName: EEntity.PRODUCT })
 export class ProductEntity extends BaseEntity {
   @Field(() => String)
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryKey({ type: 'uuid', defaultRaw: 'gen_random_uuid()' })
   id: string;
 
   @Field(() => String)
-  @Column({ default: '' })
+  @Property({ default: '' })
   image: string;
 
   @Field(() => String)
-  @Column({ unique: true, length: 100 })
+  @Property({ unique: true, length: 100 })
   name: string;
 
   @Field(() => String)
-  @Column({ length: 1000 })
+  @Property({ length: 1000 })
   description: string;
 }

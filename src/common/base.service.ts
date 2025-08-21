@@ -1,18 +1,19 @@
 import {
-  Repository,
-  FindOneOptions,
-  QueryRunner,
-  SelectQueryBuilder,
-  ObjectLiteral,
-  DataSource,
-} from 'typeorm';
-import { InjectDataSource } from '@nestjs/typeorm';
-import {
   ConflictException,
   Injectable,
   BadRequestException,
   NotFoundException,
 } from '@nestjs/common';
+import {
+  EntityManager,
+  EntityRepository,
+  FilterQuery,
+  FindOneOptions,
+  QueryOrder,
+} from '@mikro-orm/postgresql';
+import { EntityData, QBFilterQuery } from '@mikro-orm/core';
+import { ERROR_MESSAGES } from '@/common/constants';
+import { EOrder } from '@/common/enums';
 import {
   GetPaginatedRecordsDto,
   DEFAULT_PAGE_NUM,
@@ -20,64 +21,57 @@ import {
   NUM_LIMIT_RECORDS,
   PaginatedResponseDto,
 } from '@/common/dtos';
-import { ERROR_MESSAGES } from '@/common/constants';
-import { EOrder } from '@/common/enums';
 
 @Injectable()
-export class BaseService<E extends ObjectLiteral> {
-  constructor(protected readonly repository: Repository<E>) {
-    this.entityName = this.repository.metadata.name;
+export class BaseService<E extends object> {
+  constructor(protected readonly repository: EntityRepository<E>) {
+    this.entityName = repository.getEntityName();
+    this.entityManager = this.repository.getEntityManager();
   }
+
   public entityName: string;
+  public entityManager: EntityManager;
 
-  public pagingQueryBuilder: SelectQueryBuilder<E>;
-
-  @InjectDataSource()
-  public readonly dataSource: DataSource;
+  // #================#
+  // # ==> UPDATE <== #
+  // #================#
+  async update(filter: QBFilterQuery<E>, payload: EntityData<E>) {
+    await this.repository.createQueryBuilder().update(payload).where(filter).execute();
+  }
 
   // #=====================#
-  // # ==> TRANSACTION <== #
+  // # ==> FIND_RECORD <== #
   // #=====================#
-  async handleTransactionAndRelease<T>(
-    queryRunner: QueryRunner,
-    processFunc: () => Promise<T>,
-    rollbackFunc?: () => void,
-  ): Promise<T> {
-    try {
-      // Start transaction
-      await queryRunner.startTransaction();
+  async findRecord(payload: {
+    filter: FilterQuery<E> & { deletedAt?: unknown };
+    options?: FindOneOptions<E, Extract<keyof E, string>>;
+  }) {
+    const { filter, options } = payload;
 
-      // Run callback function
-      const resData = await processFunc();
+    // CASE: Filter records with deletedAt IS NOT NULL
+    if (!filter.deletedAt) filter.deletedAt = null;
 
-      // Commit transaction
-      await queryRunner.commitTransaction();
+    // Find record
+    const existRecord = await this.repository.findOne(filter, options);
 
-      return resData;
-
-      // Rollback
-    } catch (err) {
-      // Rollback func
-      if (rollbackFunc) rollbackFunc();
-
-      throw new BadRequestException({ message: err.message });
-
-      // Release the query runner
-    } finally {
-      await queryRunner.release();
-    }
+    return existRecord;
   }
 
   // #=====================#
   // # ==> CHECK_EXIST <== #
   // #=====================#
-  async checkExist(findOpts: FindOneOptions<E>, errorMessage?: string): Promise<E> {
-    const existRecord = await this.repository.findOne(findOpts);
+  async checkExist(
+    payload: Parameters<typeof this.findRecord>[0] & { errorMessage?: string },
+  ): Promise<E> {
+    const { filter, options, errorMessage } = payload;
 
-    // Throw error if the record doesn't exists
+    // Find record
+    const existRecord = await this.findRecord({ filter, options });
+
+    // CASE: [NOT_FOUND] Does not existed
     if (!existRecord)
       throw new NotFoundException({
-        message: errorMessage || `[${this.repository.metadata.name}] ${ERROR_MESSAGES.NOT_FOUND}!`,
+        message: errorMessage || `[${this.entityName}] ${ERROR_MESSAGES.NOT_FOUND}!`,
       });
 
     return existRecord;
@@ -86,15 +80,46 @@ export class BaseService<E extends ObjectLiteral> {
   // #========================#
   // # ==> CHECK_CONFLICT <== #
   // #========================#
-  async checkConflict(findOpts: FindOneOptions<E>, errorMessage?: string) {
-    const existRecord = await this.repository.findOne(findOpts);
+  async checkConflict(payload: Parameters<typeof this.findRecord>[0] & { errorMessage?: string }) {
+    const { filter, options, errorMessage } = payload;
 
-    // Throw error if the record exists
+    // Find record
+    const existRecord = await this.findRecord({ filter, options });
+
+    // CASE: [ALREADY_EXISTS] Conflict
     if (existRecord)
       throw new ConflictException({
-        message:
-          errorMessage || `[${this.repository.metadata.name}] ${ERROR_MESSAGES.ALREADY_EXISTS}!`,
+        message: errorMessage || `[${this.entityName}] ${ERROR_MESSAGES.ALREADY_EXISTS}!`,
       });
+  }
+
+  // #=====================#
+  // # ==> TRANSACTION <== #
+  // #=====================#
+  async handleTransactionAndRelease<T>(
+    txManage: EntityManager,
+    processFunc: (txManage: EntityManager) => Promise<T>,
+    rollbackFunc?: () => void,
+  ): Promise<T> {
+    // Starts new transaction
+    await txManage.begin();
+
+    try {
+      // Run processFunc
+      const resData = await processFunc(txManage);
+
+      // Commit transaction
+      await txManage.commit();
+
+      return resData;
+    } catch (err) {
+      // Transaction rollback
+      await txManage.rollback();
+
+      // Rollback func
+      if (rollbackFunc) rollbackFunc();
+      throw new BadRequestException({ message: err.message });
+    }
   }
 
   // #===============================#
@@ -102,60 +127,51 @@ export class BaseService<E extends ObjectLiteral> {
   // #===============================#
   async getPaginatedRecords(
     args: GetPaginatedRecordsDto,
-    customFilter?: () => void,
+    customFilter?: (queryBuilder: ReturnType<EntityRepository<E>['createQueryBuilder']>) => void,
   ): Promise<PaginatedResponseDto<E>> {
     const {
       isDeleted,
       createdFrom,
       createdTo,
-      includeIds,
-      excludeIds,
+      includeIds = [],
+      excludeIds = [],
       isSelectAll,
       order = EOrder.DESC,
       page = DEFAULT_PAGE_NUM,
       take = DEFAULT_PAGE_TAKE,
     } = args;
 
+    const baseQB = this.repository.createQueryBuilder(this.entityName);
+
+    baseQB.where({ deletedAt: null });
+
     // Query records based on includeIds
-    const queryBuilder = this.repository.createQueryBuilder(this.entityName);
-    if (includeIds?.length) queryBuilder.whereInIds(includeIds);
+    if (includeIds.length) baseQB.where({ id: { $in: includeIds } });
 
     // Query records based on excludeIds
-    if (excludeIds?.length)
-      queryBuilder.andWhere(`${this.entityName}.id NOT IN (:...excludeIds)`, {
-        excludeIds,
-      });
+    if (excludeIds.length) baseQB.andWhere({ id: { $nin: excludeIds } });
 
     // Query records based on createdFrom
-    if (createdFrom)
-      queryBuilder.andWhere(`${this.entityName}.createdAt >= :createdFrom`, {
-        createdFrom,
-      });
+    if (createdFrom) baseQB.andWhere({ createdAt: { $gte: createdFrom } });
 
     // Query records based on createdTo
-    if (createdTo)
-      queryBuilder.andWhere(`${this.entityName}.createdAt < :createdTo`, {
-        createdTo,
-      });
+    if (createdTo) baseQB.andWhere({ createdAt: { $lte: createdTo } });
 
     // Query deleted records
-    if (isDeleted) queryBuilder.andWhere(`${this.entityName}.deletedAt IS NOT NULL`).withDeleted();
+    if (isDeleted) baseQB.andWhere({ deletedAt: { $ne: null } });
+    // Query records are not deleted
+    else baseQB.where({ deletedAt: null });
 
-    // NOTE: Must mapping queryBuilder into pagingQueryBuilder before run customFilter
-    this.pagingQueryBuilder = queryBuilder;
-
-    // Run customFilter function
-    customFilter && customFilter();
+    // Custom filter
+    if (customFilter) customFilter(baseQB);
 
     // Sort records via createdAt
-    this.pagingQueryBuilder.addOrderBy(`${this.entityName}.createdAt`, order);
+    baseQB.orderBy({ createdAt: order === EOrder.DESC ? QueryOrder.DESC : QueryOrder.ASC });
 
-    // CASE: Select all records
-    if (isSelectAll) this.pagingQueryBuilder.limit(NUM_LIMIT_RECORDS);
-    // CASE: Select pagination records
-    else this.pagingQueryBuilder.take(take).skip((page - 1) * take);
+    if (isSelectAll) baseQB.limit(NUM_LIMIT_RECORDS);
+    else baseQB.limit(take).offset((page - 1) * take);
 
-    const [entities, count] = await this.pagingQueryBuilder.getManyAndCount();
-    return new PaginatedResponseDto<E>({ args, total: count, records: entities });
+    const [records, count] = await baseQB.getResultAndCount();
+    return new PaginatedResponseDto<E>({ args, total: count, records });
   }
 }

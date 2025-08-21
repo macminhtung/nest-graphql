@@ -1,22 +1,20 @@
 import { Module } from '@nestjs/common';
-import { DataSource } from 'typeorm';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { ConfigModule } from '@nestjs/config';
 import { GraphQLModule } from '@nestjs/graphql';
 import { YogaDriver, YogaDriverConfig } from '@graphql-yoga/nestjs';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
-import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 import { loadENVsFunc, ENV_VALIDATION } from '@/config';
 import { ApiLoggingInterceptor } from '@/interceptors';
 import { AuthGuard } from '@/guards';
 import { ApiExceptionsFilter } from '@/filters';
 import { ApiValidationPipe } from '@/pipes';
+import { MikroORMModule } from '@/modules/mikro-orm/mikro-orm.module';
 import { AuthModule } from '@/modules/auth/auth.module';
 import { UserModule } from '@/modules/user/user.module';
 import { ProductModule } from '@/modules/product/product.module';
 import { SharedModule } from '@/modules/shared/shared.module';
 import { ElasticModule } from '@/modules/elastic/elastic.module';
-import type { TEnvConfiguration } from '@/config';
+
 import type { FastifyRequest, FastifyReply } from 'fastify';
 
 @Module({
@@ -45,30 +43,10 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
     // #==============================#
     ElasticModule,
 
-    // #=========================#
-    // # ==> TYPE_ORM MODULE <== #
-    // #=========================#
-    TypeOrmModule.forRootAsync({
-      inject: [ConfigService],
-      useFactory: async (configService: ConfigService<TEnvConfiguration>) =>
-        await configService.get('database')!,
-      dataSourceFactory: async (options) => {
-        const dataSource = new DataSource({
-          entities: ['dist/**/*.entity{.ts,.js}'],
-          migrations: ['dist/migrations/*{.ts,.js}'],
-          type: 'postgres',
-          migrationsRun: false,
-          synchronize: true,
-          namingStrategy: new SnakeNamingStrategy(),
-          logging: false,
-          ...options,
-        });
-
-        await dataSource.initialize();
-        await dataSource.runMigrations();
-        return dataSource;
-      },
-    }),
+    // #==========================#
+    // # ==> MIKRO_ORM MODULE <== #
+    // #==========================#
+    MikroORMModule,
 
     SharedModule,
     UserModule,

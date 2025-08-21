@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { InjectRepository } from '@mikro-orm/nestjs';
+import { EntityRepository } from '@mikro-orm/postgresql';
 import { BaseService } from '@/common/base.service';
 import { UserEntity } from '@/modules/user/user.entity';
 import { UpdateUserDto, GetUsersPaginatedDto } from '@/modules/user/dtos';
@@ -9,7 +9,7 @@ import { UpdateUserDto, GetUsersPaginatedDto } from '@/modules/user/dtos';
 export class UserService extends BaseService<UserEntity> {
   constructor(
     @InjectRepository(UserEntity)
-    public readonly repository: Repository<UserEntity>,
+    public readonly repository: EntityRepository<UserEntity>,
   ) {
     super(repository);
   }
@@ -18,15 +18,16 @@ export class UserService extends BaseService<UserEntity> {
   // # ==> UPDATE USER <== #
   // #=====================#
   async updateUser(id: string, payload: UpdateUserDto) {
-    const user = await this.repository.save({ id, ...payload });
-    return user;
+    const existedUser = await this.checkExist({ filter: { id } });
+    await this.update({ id }, { id, ...payload });
+    return { ...existedUser, ...payload };
   }
 
   // #==================#
   // # ==> GET USER <== #
   // #==================#
   async getUser(id: string) {
-    const existedUser = await this.checkExist({ where: { id }, relations: { role: true } });
+    const existedUser = await this.checkExist({ filter: { id }, options: { populate: ['role'] } });
     return existedUser;
   }
 
@@ -34,25 +35,23 @@ export class UserService extends BaseService<UserEntity> {
   // # ==> GET PAGINATED USERS <== #
   // #=============================#
   async getPaginatedUsers(queryParams: GetUsersPaginatedDto) {
-    const paginationData = await this.getPaginatedRecords(queryParams, () => {
+    const paginationData = await this.getPaginatedRecords(queryParams, (qb) => {
       const { keySearch, roleIds } = queryParams;
-      const alias = this.entityName;
 
-      this.pagingQueryBuilder.leftJoinAndSelect(`${alias}.role`, 'role');
+      qb.leftJoinAndSelect(`${this.entityName}.role`, 'R');
 
       // Filter based on roleIds
-      if (roleIds?.length)
-        this.pagingQueryBuilder.andWhere(`${alias}.roleId IN (:...roleIds)`, {
-          roleIds,
-        });
+      if (roleIds?.length) qb.andWhere({ roleId: { $in: roleIds } });
 
-      // Query based on keySearch
-      if (keySearch)
-        this.pagingQueryBuilder.andWhere(
-          `(${alias}.firstName ILIKE :keySearch
-          OR ${alias}.lastName ILIKE :keySearch)`,
-          { keySearch: `%${keySearch}%` },
-        );
+      // Filter based on keySearch
+      if (keySearch) {
+        qb.andWhere({
+          $or: [
+            { firstName: { $ilike: `%${keySearch}%` } },
+            { lastName: { $ilike: `%${keySearch}%` } },
+          ],
+        });
+      }
     });
 
     return paginationData;
