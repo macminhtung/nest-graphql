@@ -30,8 +30,6 @@ export class BaseService<E extends ObjectLiteral> {
   }
   public entityName: string;
 
-  public pagingQueryBuilder: SelectQueryBuilder<E>;
-
   @InjectDataSource()
   public readonly dataSource: DataSource;
 
@@ -102,7 +100,7 @@ export class BaseService<E extends ObjectLiteral> {
   // #===============================#
   async getPaginatedRecords(
     args: GetPaginatedRecordsDto,
-    customFilter?: () => void,
+    customFilter?: (qb: SelectQueryBuilder<E>) => void,
   ): Promise<PaginatedResponseDto<E>> {
     const {
       isDeleted,
@@ -117,45 +115,34 @@ export class BaseService<E extends ObjectLiteral> {
     } = args;
 
     // Query records based on includeIds
-    const queryBuilder = this.repository.createQueryBuilder(this.entityName);
-    if (includeIds?.length) queryBuilder.whereInIds(includeIds);
+    const qb = this.repository.createQueryBuilder(this.entityName);
+    if (includeIds?.length) qb.whereInIds(includeIds);
 
     // Query records based on excludeIds
     if (excludeIds?.length)
-      queryBuilder.andWhere(`${this.entityName}.id NOT IN (:...excludeIds)`, {
-        excludeIds,
-      });
+      qb.andWhere(`${this.entityName}.id NOT IN (:...excludeIds)`, { excludeIds });
 
     // Query records based on createdFrom
-    if (createdFrom)
-      queryBuilder.andWhere(`${this.entityName}.createdAt >= :createdFrom`, {
-        createdFrom,
-      });
+    if (createdFrom) qb.andWhere(`${this.entityName}.createdAt >= :createdFrom`, { createdFrom });
 
     // Query records based on createdTo
-    if (createdTo)
-      queryBuilder.andWhere(`${this.entityName}.createdAt < :createdTo`, {
-        createdTo,
-      });
+    if (createdTo) qb.andWhere(`${this.entityName}.createdAt < :createdTo`, { createdTo });
 
     // Query deleted records
-    if (isDeleted) queryBuilder.andWhere(`${this.entityName}.deletedAt IS NOT NULL`).withDeleted();
-
-    // NOTE: Must mapping queryBuilder into pagingQueryBuilder before run customFilter
-    this.pagingQueryBuilder = queryBuilder;
+    if (isDeleted) qb.andWhere(`${this.entityName}.deletedAt IS NOT NULL`).withDeleted();
 
     // Run customFilter function
-    customFilter && customFilter();
+    customFilter && customFilter(qb);
 
     // Sort records via createdAt
-    this.pagingQueryBuilder.addOrderBy(`${this.entityName}.createdAt`, order);
+    qb.addOrderBy(`${this.entityName}.createdAt`, order);
 
     // CASE: Select all records
-    if (isSelectAll) this.pagingQueryBuilder.limit(NUM_LIMIT_RECORDS);
+    if (isSelectAll) qb.limit(NUM_LIMIT_RECORDS);
     // CASE: Select pagination records
-    else this.pagingQueryBuilder.take(take).skip((page - 1) * take);
+    else qb.take(take).skip((page - 1) * take);
 
-    const [entities, count] = await this.pagingQueryBuilder.getManyAndCount();
+    const [entities, count] = await qb.getManyAndCount();
     return new PaginatedResponseDto<E>({ args, total: count, records: entities });
   }
 }
