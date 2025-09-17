@@ -8,7 +8,7 @@ import { RoleEntity } from '@/modules/user/role/role.entity';
 @Entity({ tableName: EEntity.USER })
 export class UserEntity extends BaseEntity {
   @Field(() => String)
-  @PrimaryKey({ type: 'uuid', defaultRaw: 'gen_random_uuid()' })
+  @PrimaryKey({ type: 'uuid' })
   id: string;
 
   @Field(() => String)

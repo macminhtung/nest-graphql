@@ -15,7 +15,7 @@ export class Migration20251111111111 extends Migration {
     // INSERT ADMIN ACCOUNT
     this.addSql(`
       INSERT INTO "${EEntity.USER}" (id, role_id, email, first_name, last_name, password, is_email_verified)
-      VALUES ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', ${DEFAULT_ROLES.ADMIN.id}, 'admin@gmail.com', 'T', 'MM', '$2b$10$yZcgS/ffS6xicYduxWzWdOayop7Dg/k06SxkzelJKJQ.9MnHF7yeO', TRUE);
+      VALUES ('00000199-56aa-70dd-8757-bb3e84f4153d', ${DEFAULT_ROLES.ADMIN.id}, 'admin@gmail.com', 'T', 'MM', '$2b$10$yZcgS/ffS6xicYduxWzWdOayop7Dg/k06SxkzelJKJQ.9MnHF7yeO', TRUE);
     `);
   }
 

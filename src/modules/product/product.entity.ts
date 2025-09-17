@@ -7,7 +7,7 @@ import { BaseEntity } from '@/common/base.entity';
 @Entity({ tableName: EEntity.PRODUCT })
 export class ProductEntity extends BaseEntity {
   @Field(() => String)
-  @PrimaryKey({ type: 'uuid', defaultRaw: 'gen_random_uuid()' })
+  @PrimaryKey({ type: 'uuid' })
   id: string;
 
   @Field(() => String)
