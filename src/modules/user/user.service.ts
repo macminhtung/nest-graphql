@@ -19,7 +19,7 @@ export class UserService extends BaseService<UserEntity> {
   // #=====================#
   async updateUser(id: string, payload: UpdateUserDto) {
     const existedUser = await this.checkExist({ filter: { id } });
-    await this.update({ id }, { id, ...payload });
+    await this.update({ filter: { id }, entityData: payload });
     return { ...existedUser, ...payload };
   }
 

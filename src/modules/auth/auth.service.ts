@@ -105,14 +105,16 @@ export class AuthService extends BaseService<UserEntity> {
     const hashPassword = await this.generateHashPassword(password);
 
     // Create a new user
-    const newUser = await this.repository.upsert({
-      email,
-      password: hashPassword,
-      firstName,
-      lastName,
-      isEmailVerified: true,
-      passwordTimestamp,
-      roleId: DEFAULT_ROLES.USER.id,
+    const newUser = await this.create({
+      entityData: {
+        email,
+        password: hashPassword,
+        firstName,
+        lastName,
+        isEmailVerified: true,
+        passwordTimestamp,
+        roleId: DEFAULT_ROLES.USER.id,
+      },
     });
 
     return newUser;
@@ -220,13 +222,12 @@ export class AuthService extends BaseService<UserEntity> {
     if (!isCorrectPassword)
       throw new BadRequestException({ message: ERROR_MESSAGES.PASSWORD_INCORRECT });
 
-    // Set new password
+    // Update the password
     const newPasswordTimestamp = new Date().valueOf().toString();
     const hashPassword = await this.generateHashPassword(newPassword);
-    await this.userService.repository.upsert({
-      id: authId,
-      password: hashPassword,
-      passwordTimestamp: newPasswordTimestamp,
+    await this.userService.update({
+      filter: { id: authId },
+      entityData: { password: hashPassword, passwordTimestamp: newPasswordTimestamp },
     });
 
     // Generate accessToken
@@ -260,7 +261,7 @@ export class AuthService extends BaseService<UserEntity> {
   // # ==> UPDATE PROFILE <== #
   // #========================#
   async updateProfile(req: TRequest, payload: UpdateProfileDto) {
-    await this.update({ id: req.authUser.id }, payload);
+    await this.update({ filter: { id: req.authUser.id }, entityData: payload });
     return { ...req.authUser, ...payload };
   }
 
