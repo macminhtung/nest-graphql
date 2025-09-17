@@ -32,11 +32,11 @@ export class ProductService extends BaseService<ProductEntity> {
 
       // Process function
       async () => {
-        // Create new product
-        const newProduct = txManager.create(ProductEntity, payload);
+        // Identify the transaction repository
+        const txRepository = txManager.getRepository(ProductEntity);
 
-        // Insert new product
-        await txManager.insert(newProduct);
+        // Create new product
+        const newProduct = await this.create({ entityData: payload, txRepository });
 
         // Create index for the new product
         await this.searchProductService.index(newProduct);
@@ -65,8 +65,11 @@ export class ProductService extends BaseService<ProductEntity> {
 
       // Process function
       async () => {
+        // Identify the transaction repository
+        const txRepository = txManager.getRepository(ProductEntity);
+
         // Update product
-        await txManager.upsert(ProductEntity, { id, ...payload });
+        await this.update({ filter: { id }, entityData: payload, txRepository });
 
         // Update index for the new product
         await this.searchProductService.index({ id, ...payload });
@@ -81,7 +84,7 @@ export class ProductService extends BaseService<ProductEntity> {
   // #========================#
   async deleteProduct(id: string) {
     // Check the product already exists
-    const existedProduct = await this.checkExist({ filter: { id } });
+    await this.checkExist({ filter: { id } });
 
     // Start transaction
     const txManager = this.entityManager.fork();
@@ -90,8 +93,11 @@ export class ProductService extends BaseService<ProductEntity> {
 
       // Process function
       async () => {
+        // Identify the transaction repository
+        const txRepository = txManager.getRepository(ProductEntity);
+
         // Delete product
-        await txManager.remove(existedProduct).flush();
+        await this.delete({ filter: { id }, txRepository });
 
         // Delete index for the product
         await this.searchProductService.delete(id);

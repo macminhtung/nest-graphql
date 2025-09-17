@@ -11,7 +11,8 @@ import {
   FindOneOptions,
   QueryOrder,
 } from '@mikro-orm/postgresql';
-import { EntityData, QBFilterQuery } from '@mikro-orm/core';
+import { EntityData, QBFilterQuery, RequiredEntityData } from '@mikro-orm/core';
+import { v7 as uuidv7 } from 'uuid';
 import { ERROR_MESSAGES } from '@/common/constants';
 import { EOrder } from '@/common/enums';
 import {
@@ -33,10 +34,58 @@ export class BaseService<E extends object> {
   public entityManager: EntityManager;
 
   // #================#
+  // # ==> CREATE <== #
+  // #================#
+  async create(payload: {
+    entityData: RequiredEntityData<E>;
+    txRepository?: EntityRepository<E>;
+  }): Promise<E> {
+    const { entityData, txRepository } = payload;
+
+    // Identify the repository
+    const repository = txRepository || this.repository;
+
+    // Create the entity
+    const entity = repository.create({ id: uuidv7(), ...entityData });
+
+    // Insert the entity
+    const newRecord = await repository.upsert(entity);
+
+    return newRecord;
+  }
+
+  // #================#
   // # ==> UPDATE <== #
   // #================#
-  async update(filter: QBFilterQuery<E>, payload: EntityData<E>) {
-    await this.repository.createQueryBuilder().update(payload).where(filter).execute();
+  async update(payload: {
+    filter: QBFilterQuery<E>;
+    entityData: EntityData<E>;
+    txRepository?: EntityRepository<E>;
+  }) {
+    const { filter, entityData, txRepository } = payload;
+
+    // Identify the repository
+    const repository = txRepository || this.repository;
+
+    // Update the payload
+    await repository.createQueryBuilder().update(entityData).where(filter).execute();
+  }
+
+  // #================#
+  // # ==> DELETE <== #
+  // #================#
+  async delete(payload: {
+    filter: QBFilterQuery<E>;
+    txRepository?: EntityRepository<E>;
+    isHardDelete?: boolean;
+  }) {
+    const { filter, txRepository } = payload;
+
+    // Identify the repository
+    const repository = txRepository || this.repository;
+
+    // CASE: Hard delete
+    await repository.createQueryBuilder().delete(filter).execute();
   }
 
   // #=====================#
