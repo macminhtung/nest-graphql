@@ -14,7 +14,6 @@ import { UserModule } from '@/modules/user/user.module';
 import { ProductModule } from '@/modules/product/product.module';
 import { SharedModule } from '@/modules/shared/shared.module';
 import { ElasticModule } from '@/modules/elastic/elastic.module';
-
 import type { FastifyRequest, FastifyReply } from 'fastify';
 
 @Module({
