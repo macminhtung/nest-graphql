@@ -74,11 +74,7 @@ export class BaseService<E extends object> {
   // #================#
   // # ==> DELETE <== #
   // #================#
-  async delete(payload: {
-    filter: QBFilterQuery<E>;
-    txRepository?: EntityRepository<E>;
-    isHardDelete?: boolean;
-  }) {
+  async delete(payload: { filter: QBFilterQuery<E>; txRepository?: EntityRepository<E> }) {
     const { filter, txRepository } = payload;
 
     // Identify the repository
