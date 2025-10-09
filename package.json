@@ -12,7 +12,7 @@
     "start:dev": "cross-env NODE_ENV=dev nest start --watch",
     "start:stg": "cross-env NODE_ENV=stg nest start --watch",
     "start:prod": "cross-env NODE_ENV=prod node dist/main",
-    "migration:create": "mikro-orm migration:create",
+    "migration:create": "mikro-orm migration:create --config src/modules/mikro-orm/mikro-orm.config.ts",
     "seeder:create": "mikro-orm seeder:create",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "jest",
@@ -98,8 +98,8 @@
   },
   "mikro-orm": {
     "configPaths": [
-      "./src/data-source.ts",
-      "./dist/data-source.js"
+      "./src/modules/mikro-orm/mikro-orm.config.ts",
+      "./dist/modules/mikro-orm/mikro-orm.config.js"
     ]
   },
   "resolutions": {
