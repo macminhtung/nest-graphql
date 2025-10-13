@@ -16,6 +16,7 @@ import {
 } from '@/modules/shared/services';
 import type { TRequest } from '@/common/types';
 import type { FastifyReply } from 'fastify';
+import { RoleEntity } from '@/modules/user/role/role.entity';
 import {
   SignUpDto,
   SignInDto,
@@ -113,7 +114,7 @@ export class AuthService extends BaseService<UserEntity> {
         lastName,
         isEmailVerified: true,
         passwordTimestamp,
-        roleId: DEFAULT_ROLES.USER.id,
+        role: this.entityManager.getReference(RoleEntity, DEFAULT_ROLES.USER.id),
       },
     });
 

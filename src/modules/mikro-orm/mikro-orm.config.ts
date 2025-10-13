@@ -25,7 +25,7 @@ export const config: MikroOrmModuleOptions = {
   user: process.env.POSTGRES_USER || 'postgres',
   password: process.env.POSTGRES_PASSWORD,
   dbName: process.env.POSTGRES_DATABASE,
-  // debug: true,
+  debug: true,
 };
 
 export default config;

@@ -41,9 +41,9 @@ export class UserEntity extends BaseEntity {
 
   @Field(() => Number)
   @Property({ type: 'int4', persist: false })
-  roleId: number;
+  roleId?: number;
 
   @Field(() => RoleEntity, { nullable: true })
-  @ManyToOne(() => RoleEntity)
+  @ManyToOne(() => RoleEntity, { fieldName: 'role_id' })
   role?: RoleEntity;
 }
