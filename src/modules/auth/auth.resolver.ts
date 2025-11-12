@@ -9,7 +9,7 @@ import {
   SignUpDto,
   SignInDto,
   SignInResponseDto,
-  RefreshTokenDto,
+  RefreshAccessTokenDto,
   UpdatePasswordDto,
   UpdateProfileDto,
   GeneratePreSignedUrlDto,
@@ -44,20 +44,20 @@ export class AuthResolver {
   // # ==> SIGNOUT <== #
   // #=================#
   @Mutation(() => Number)
-  signOut(@Context() { reply }: { reply: FastifyReply }): HttpStatus {
-    return this.authService.signOut(reply);
+  signOut(@Context() { req, reply }: { req: TRequest; reply: FastifyReply }): Promise<HttpStatus> {
+    return this.authService.signOut(req, reply);
   }
 
-  // #=======================#
-  // # ==> REFRESH TOKEN <== #
-  // #=======================#
+  // #==============================#
+  // # ==> REFRESH ACCESS TOKEN <== #
+  // #==============================#
   @Public()
   @Mutation(() => SignInResponseDto)
-  refreshToken(
+  refreshAccessToken(
     @Context() { req }: { req: TRequest },
-    @Args('payload') payload: RefreshTokenDto,
+    @Args('payload') payload: RefreshAccessTokenDto,
   ): Promise<SignInResponseDto> {
-    return this.authService.refreshToken(req, payload);
+    return this.authService.refreshAccessToken(req, payload);
   }
 
   // #=========================#

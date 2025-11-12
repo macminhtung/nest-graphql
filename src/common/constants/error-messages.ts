@@ -1,7 +1,6 @@
 export const ERROR_MESSAGES = {
-  TOKEN_INVALID: 'Token invalid',
   PASSWORD_INCORRECT: 'Password incorrect',
-  TIMESTAMP_INCORRECT: 'Timestamp incorrect',
+  PASSWORD_REUSED: 'Password reused',
   ACCESS_TOKEN_INVALID: 'Access token invalid',
   REFRESH_TOKEN_INVALID: 'Refresh token invalid',
   PERMISSION_INVALID: 'Permission invalid',

@@ -11,7 +11,7 @@ import {
   FindOneOptions,
   QueryOrder,
 } from '@mikro-orm/postgresql';
-import { EntityData, QBFilterQuery, RequiredEntityData } from '@mikro-orm/core';
+import { EntityData, Loaded, QBFilterQuery, RequiredEntityData } from '@mikro-orm/core';
 import { v7 as uuidv7 } from 'uuid';
 import { ERROR_MESSAGES } from '@/common/constants';
 import { EOrder } from '@/common/enums';
@@ -89,7 +89,7 @@ export class BaseService<E extends object> {
   // #=====================#
   async findRecord(payload: {
     filter: FilterQuery<E> & { deletedAt?: unknown };
-    options?: FindOneOptions<E, Extract<keyof E, string>>;
+    options?: FindOneOptions<E, Extract<keyof E, string>, Extract<keyof E, string>>;
   }) {
     const { filter, options } = payload;
 
@@ -106,8 +106,11 @@ export class BaseService<E extends object> {
   // # ==> CHECK_EXIST <== #
   // #=====================#
   async checkExist(
+    p: Parameters<typeof this.findRecord>[0] & { errorMessage?: string },
+  ): Promise<E>;
+  async checkExist(
     payload: Parameters<typeof this.findRecord>[0] & { errorMessage?: string },
-  ): Promise<E> {
+  ): Promise<E | Loaded<E, Extract<keyof E, string>, Extract<keyof E, string>>> {
     const { filter, options, errorMessage } = payload;
 
     // Find record

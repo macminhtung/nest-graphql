@@ -2,7 +2,7 @@ import { Field, InputType } from '@nestjs/graphql';
 import { IsString } from 'class-validator';
 
 @InputType()
-export class RefreshTokenDto {
+export class RefreshAccessTokenDto {
   @Field(() => String)
   @IsString()
   accessToken: string;
