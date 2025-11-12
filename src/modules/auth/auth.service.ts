@@ -56,7 +56,7 @@ export class AuthService extends BaseService<UserEntity> {
     const hashToken = this.userTokenService.generateHashToken(token);
 
     const existedUser = await this.checkExist({
-      filter: { id: userId, tokenManagements: { type, hashToken } },
+      filter: { id: userId, userTokens: { type, hashToken } },
       options: { populate: ['role'] },
       errorMessage,
     });
