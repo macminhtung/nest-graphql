@@ -1,10 +1,10 @@
 import { Column, PrimaryColumn, Entity } from 'typeorm';
 import { Field, ObjectType } from '@nestjs/graphql';
-import { EEntity, ERoleName } from '@/common/enums';
+import { ETableName, ERoleName } from '@/common/enums';
 import { BaseEntity } from '@/common/base.entity';
 
 @ObjectType()
-@Entity({ name: EEntity.ROLE })
+@Entity({ name: ETableName.ROLE })
 export class RoleEntity extends BaseEntity {
   @Field(() => Number)
   @PrimaryColumn({ type: 'int4' })

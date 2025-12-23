@@ -1,10 +1,10 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 import { Column, PrimaryGeneratedColumn, Entity } from 'typeorm';
-import { EEntity } from '@/common/enums';
+import { ETableName } from '@/common/enums';
 import { BaseEntity } from '@/common/base.entity';
 
 @ObjectType()
-@Entity({ name: EEntity.PRODUCT })
+@Entity({ name: ETableName.PRODUCT })
 export class ProductEntity extends BaseEntity {
   @Field(() => String)
   @PrimaryGeneratedColumn('uuid')

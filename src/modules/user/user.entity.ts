@@ -1,14 +1,14 @@
-import { Column, PrimaryGeneratedColumn, Entity, ManyToOne, Index, JoinColumn } from 'typeorm';
+import { Column, PrimaryColumn, Entity, ManyToOne, Index, JoinColumn } from 'typeorm';
 import { Field, ObjectType } from '@nestjs/graphql';
-import { EEntity } from '@/common/enums';
+import { ETableName } from '@/common/enums';
 import { BaseEntity } from '@/common/base.entity';
 import { RoleEntity } from '@/modules/user/role/role.entity';
 
 @ObjectType()
-@Entity({ name: EEntity.USER })
+@Entity({ name: ETableName.USER })
 export class UserEntity extends BaseEntity {
   @Field(() => String)
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryColumn('uuid')
   id: string;
 
   @Field(() => String)
@@ -23,17 +23,14 @@ export class UserEntity extends BaseEntity {
   password: string;
 
   @Field(() => String)
-  @Column()
+  @Column({ length: 100 })
   @Index()
   firstName: string;
 
   @Field(() => String)
-  @Column()
+  @Column({ length: 100 })
   @Index()
   lastName: string;
-
-  @Column({ default: new Date().valueOf().toString() })
-  passwordTimestamp: string; // ==> Check JWT after password change
 
   @Field(() => Boolean)
   @Column({ default: false })
@@ -41,7 +38,7 @@ export class UserEntity extends BaseEntity {
 
   // Relation columns
   @Field(() => Number)
-  @Column({ type: 'int2' })
+  @Column({ type: 'int4' })
   roleId: number;
 
   // Relation tables

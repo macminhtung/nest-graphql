@@ -4,13 +4,6 @@ export const loadENVsFunc = () => ({
   port: process.env.PORT!,
   jwtSecretKey: process.env.JWT_SECRET_KEY!,
   appUri: process.env.APP_URI!,
-  database: {
-    host: process.env.POSTGRES_HOST!,
-    port: +process.env.POSTGRES_PORT!,
-    username: process.env.POSTGRES_USER!,
-    password: process.env.POSTGRES_PASSWORD!,
-    database: process.env.POSTGRES_DATABASE!,
-  },
   elastic: {
     node: process.env.ELASTIC_NODE!,
     username: process.env.ELASTIC_USER!,

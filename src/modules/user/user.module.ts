@@ -5,10 +5,11 @@ import { UserService } from '@/modules/user/user.service';
 import { UserResolver } from '@/modules/user/user.resolver';
 import { RoleEntity } from '@/modules/user/role/role.entity';
 import { RoleService } from '@/modules/user/role/role.service';
+import { RoleLoader } from '@/modules/user/role/role.loader';
 
 @Module({
   imports: [TypeOrmModule.forFeature([UserEntity, RoleEntity])],
-  providers: [UserResolver, UserService, RoleService],
-  exports: [UserService, RoleService],
+  providers: [UserResolver, UserService, RoleService, RoleLoader],
+  exports: [UserService, RoleService, RoleLoader],
 })
 export class UserModule {}
