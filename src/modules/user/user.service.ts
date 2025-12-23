@@ -26,7 +26,7 @@ export class UserService extends BaseService<UserEntity> {
   // # ==> GET USER <== #
   // #==================#
   async getUser(id: string) {
-    const existedUser = await this.checkExist({ where: { id }, relations: { role: true } });
+    const existedUser = await this.checkExist({ where: { id } });
     return existedUser;
   }
 
@@ -38,15 +38,13 @@ export class UserService extends BaseService<UserEntity> {
       const { keySearch, roleIds } = queryParams;
       const alias = this.entityName;
 
-      qb.leftJoinAndSelect(`${alias}.role`, 'role');
-
       // Filter based on roleIds
       if (roleIds?.length) qb.andWhere(`${alias}.roleId IN (:...roleIds)`, { roleIds });
 
       // Query based on keySearch
       if (keySearch)
         qb.andWhere(`(${alias}.firstName ILIKE :keySearch OR ${alias}.lastName ILIKE :keySearch)`, {
-          keySearch: `%${keySearch}%`,
+          keySearch: `%${keySearch}`,
         });
     });
 

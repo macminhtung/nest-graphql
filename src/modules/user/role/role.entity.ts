@@ -8,7 +8,7 @@ import { BaseEntity } from '@/common/base.entity';
 export class RoleEntity extends BaseEntity {
   @Field(() => Number)
   @PrimaryColumn({ type: 'int4' })
-  id: string;
+  id: number;
 
   @Field(() => String)
   @Column({ type: 'enum', enum: ERoleName })

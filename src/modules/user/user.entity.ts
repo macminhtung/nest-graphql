@@ -1,4 +1,4 @@
-import { Column, PrimaryGeneratedColumn, Entity, ManyToOne, Index } from 'typeorm';
+import { Column, PrimaryGeneratedColumn, Entity, ManyToOne, Index, JoinColumn } from 'typeorm';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { EEntity } from '@/common/enums';
 import { BaseEntity } from '@/common/base.entity';
@@ -47,5 +47,6 @@ export class UserEntity extends BaseEntity {
   // Relation tables
   @Field(() => RoleEntity, { nullable: true })
   @ManyToOne(() => RoleEntity)
+  @JoinColumn({ name: 'role_id' })
   role: RoleEntity;
 }
