@@ -1,5 +1,5 @@
 import { Field, ObjectType } from '@nestjs/graphql';
-import { Column, PrimaryGeneratedColumn, Entity } from 'typeorm';
+import { Column, PrimaryColumn, Entity } from 'typeorm';
 import { ETableName } from '@/common/enums';
 import { BaseEntity } from '@/common/base.entity';
 
@@ -7,7 +7,7 @@ import { BaseEntity } from '@/common/base.entity';
 @Entity({ name: ETableName.PRODUCT })
 export class ProductEntity extends BaseEntity {
   @Field(() => String)
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryColumn('uuid')
   id: string;
 
   @Field(() => String)

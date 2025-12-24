@@ -4,9 +4,10 @@ import { AuthResolver } from '@/modules/auth/auth.resolver';
 import { UserModule } from '@/modules/user/user.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserEntity } from '@/modules/user/user.entity';
+import { RedisCacheModule } from '@/modules/redis-cache/redis-cache.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([UserEntity]), UserModule],
+  imports: [TypeOrmModule.forFeature([UserEntity]), UserModule, RedisCacheModule],
   providers: [AuthResolver, AuthService],
   exports: [AuthService],
 })

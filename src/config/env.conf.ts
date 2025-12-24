@@ -4,6 +4,13 @@ export const loadENVsFunc = () => ({
   port: process.env.PORT!,
   jwtSecretKey: process.env.JWT_SECRET_KEY!,
   appUri: process.env.APP_URI!,
+  redis: {
+    host: process.env.REDIS_HOST!,
+    port: +process.env.REDIS_PORT!,
+    username: process.env.REDIS_USERNAME!,
+    password: process.env.REDIS_PASSWORD!,
+    ttl: +process.env.REDIS_TTL!,
+  },
   elastic: {
     node: process.env.ELASTIC_NODE!,
     username: process.env.ELASTIC_USER!,

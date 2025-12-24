@@ -44,8 +44,8 @@ export class AuthResolver {
   // # ==> SIGNOUT <== #
   // #=================#
   @Mutation(() => Number)
-  signOut(@Context() { res }: { res: Response }): HttpStatus {
-    return this.authService.signOut(res);
+  signOut(@Context() { req, res }: { req: TRequest; res: Response }): Promise<HttpStatus> {
+    return this.authService.signOut(req, res);
   }
 
   // #=======================#

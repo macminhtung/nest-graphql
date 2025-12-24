@@ -16,6 +16,12 @@ export const ENV_VALIDATION = Joi.object({
   TYPEORM_MIGRATIONS_RUN: Joi.boolean().required(),
   TYPEORM_DEBUG: Joi.boolean().default(false),
 
+  REDIS_HOST: Joi.string().required(),
+  REDIS_PORT: Joi.number().default(6379),
+  REDIS_USERNAME: Joi.string().optional().allow('', null),
+  REDIS_PASSWORD: Joi.string().optional().allow('', null),
+  REDIS_TTL: Joi.number().default(600000), // ==> 10 minutes
+
   ELASTIC_NODE: Joi.string().required(),
   ELASTIC_USER: Joi.string().required(),
   ELASTIC_PASSWORD: Joi.string().required(),

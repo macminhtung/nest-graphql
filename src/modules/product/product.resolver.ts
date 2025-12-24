@@ -1,5 +1,7 @@
 import { Resolver, Query, Args, Mutation } from '@nestjs/graphql';
-import { ETableName, ERoleName } from '@/common/enums';
+import { ParseUUIDPipe } from '@nestjs/common';
+import { ETableName } from '@/common/enums';
+import { DEFAULT_ROLES } from '@/common/constants';
 import { Public, Roles } from '@/decorators';
 import { GetPaginatedRecordsDto, PaginatedResponseDto } from '@/common/dtos';
 import { ProductService } from '@/modules/product/product.service';
@@ -13,7 +15,7 @@ export class ProductResolver {
   // #========================#
   // # ==> CREATE PRODUCT <== #
   // #========================#
-  @Roles([ERoleName.ADMIN])
+  @Roles([DEFAULT_ROLES.ADMIN.id])
   @Mutation(() => ProductEntity)
   createProduct(@Args('payload') payload: CreateProductDto): Promise<ProductEntity> {
     return this.productService.createProduct(payload);
@@ -22,10 +24,10 @@ export class ProductResolver {
   // #========================#
   // # ==> UPDATE PRODUCT <== #
   // #========================#
-  @Roles([ERoleName.ADMIN])
+  @Roles([DEFAULT_ROLES.ADMIN.id])
   @Mutation(() => ProductEntity)
   updateProduct(
-    @Args('id') id: string,
+    @Args('id', ParseUUIDPipe) id: string,
     @Args('payload') payload: CreateProductDto,
   ): Promise<ProductEntity> {
     return this.productService.updateProduct(id, payload);
@@ -34,9 +36,9 @@ export class ProductResolver {
   // #========================#
   // # ==> DELETE PRODUCT <== #
   // #========================#
-  @Roles([ERoleName.ADMIN])
+  @Roles([DEFAULT_ROLES.ADMIN.id])
   @Mutation(() => String)
-  deleteProduct(@Args('id') id: string): Promise<string> {
+  deleteProduct(@Args('id', ParseUUIDPipe) id: string): Promise<string> {
     return this.productService.deleteProduct(id);
   }
 
