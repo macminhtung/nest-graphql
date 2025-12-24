@@ -20,10 +20,16 @@ export class Migration1764856961099 implements MigrationInterface {
       `CREATE INDEX "IDX_195d98fb5e96f44b4588cd8f45" ON "user_token" ("user_id", "type", "hash_token") `,
     );
     await queryRunner.query(
-      `CREATE TABLE "user" ("created_at" TIMESTAMP NOT NULL DEFAULT now(), "updated_at" TIMESTAMP DEFAULT now(), "deleted_at" TIMESTAMP, "id" uuid NOT NULL, "avatar" character varying(500) NOT NULL DEFAULT '', "email" character varying NOT NULL, "password" character varying NOT NULL, "first_name" character varying(100) NOT NULL, "last_name" character varying(100) NOT NULL, "is_email_verified" boolean NOT NULL DEFAULT false, "role_id" integer NOT NULL, CONSTRAINT "UQ_e12875dfb3b1d92d7d7c5377e22" UNIQUE ("email"), CONSTRAINT "PK_cace4a159ff9f2512dd42373760" PRIMARY KEY ("id"))`,
+      `CREATE TABLE "user" ("created_at" TIMESTAMP NOT NULL DEFAULT now(), "updated_at" TIMESTAMP DEFAULT now(), "deleted_at" TIMESTAMP, "id" uuid NOT NULL, "avatar" character varying NOT NULL DEFAULT '', "email" character varying NOT NULL, "password" character varying NOT NULL, "first_name" character varying(100) NOT NULL, "last_name" character varying(100) NOT NULL, "is_email_verified" boolean NOT NULL DEFAULT false, "role_id" integer NOT NULL, CONSTRAINT "UQ_e12875dfb3b1d92d7d7c5377e22" UNIQUE ("email"), CONSTRAINT "PK_cace4a159ff9f2512dd42373760" PRIMARY KEY ("id"))`,
     );
     await queryRunner.query(
-      `CREATE TABLE "product" ("created_at" TIMESTAMP NOT NULL DEFAULT now(), "updated_at" TIMESTAMP DEFAULT now(), "deleted_at" TIMESTAMP, "id" uuid NOT NULL, "image" character varying NOT NULL, "name" character varying(100) NOT NULL, "description" character varying(1000) NOT NULL, CONSTRAINT "UQ_22cc43e9a74d7498546e9a63e77" UNIQUE ("name"), CONSTRAINT "PK_bebc9158e480b949565b4dc7a82" PRIMARY KEY ("id"))`,
+      `CREATE INDEX "IDX_7a4fd2a547828e5efe420e50d1" ON "user" ("first_name") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_6937e802be2946855a3ad0e6be" ON "user" ("last_name") `,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "product" ("created_at" TIMESTAMP NOT NULL DEFAULT now(), "updated_at" TIMESTAMP DEFAULT now(), "deleted_at" TIMESTAMP, "id" uuid NOT NULL, "image" character varying NOT NULL DEFAULT '', "name" character varying(100) NOT NULL, "description" character varying(1000) NOT NULL, CONSTRAINT "UQ_22cc43e9a74d7498546e9a63e77" UNIQUE ("name"), CONSTRAINT "PK_bebc9158e480b949565b4dc7a82" PRIMARY KEY ("id"))`,
     );
     await queryRunner.query(
       `ALTER TABLE "user_token" ADD CONSTRAINT "FK_79ac751931054ef450a2ee47778" FOREIGN KEY ("user_id") REFERENCES "user"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`,
@@ -39,6 +45,8 @@ export class Migration1764856961099 implements MigrationInterface {
       `ALTER TABLE "user_token" DROP CONSTRAINT "FK_79ac751931054ef450a2ee47778"`,
     );
     await queryRunner.query(`DROP TABLE "product"`);
+    await queryRunner.query(`DROP INDEX "public"."IDX_6937e802be2946855a3ad0e6be"`);
+    await queryRunner.query(`DROP INDEX "public"."IDX_7a4fd2a547828e5efe420e50d1"`);
     await queryRunner.query(`DROP TABLE "user"`);
     await queryRunner.query(`DROP INDEX "public"."IDX_195d98fb5e96f44b4588cd8f45"`);
     await queryRunner.query(`DROP TABLE "user_token"`);
